@@ -28,6 +28,11 @@
             <version>4.8.4.B</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.14</version>
+        </dependency>
+        <dependency>
             <groupId>com.xuxueli</groupId>
             <artifactId>xxl-job-admin</artifactId>
             <version>3.4.2</version>
