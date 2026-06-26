@@ -7,6 +7,9 @@
     <groupId>io.github.loulangogogo</groupId>
     <artifactId>xxl-job-alarm</artifactId>
     <version>3.4.2.0</version>
+    <name>xxl-job-alarm</name>
+    <description>XXL-Job 告警扩展模块，提供邮件通知和企业微信通知功能。</description>
+    <url>https://github.com/loulangogogo/xxl-job-alarm</url>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -117,4 +120,10 @@
             <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
         </license>
     </licenses>
+
+    <scm>
+        <connection>scm:git@github.com:loulangogogo/xxl-job-alarm.git</connection>
+        <developerConnection>scm:git@github.com:loulangogogo/xxl-job-alarm.git</developerConnection>
+        <url>git@github.com:loulangogogo/xxl-job-alarm.git</url>
+    </scm>
 </project>
