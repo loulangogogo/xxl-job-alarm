@@ -78,16 +78,8 @@ public class WechatWorkJobAlarm implements JobAlarm {
             return false;
         }
 
-        // 构建告警内容
-        String alarmContent = buildAlarmContent(info, jobLog);
-
-        // 获取任务组信息
-        XxlJobGroup group = XxlJobAdminBootstrap.getInstance().getXxlJobGroupMapper()
-                .load(Integer.valueOf(info.getJobGroup()));
-        String groupName = group != null ? group.getTitle() : "未知任务组";
-
         // 构建消息内容
-        String content = buildMessageContent(groupName, info, alarmContent);
+        String content = buildMessageContent(info, jobLog);
 
         // 发送消息给所有接收人
         Set<String> receiverSet = new HashSet<>(Arrays.asList(info.getAlarmEmail().split(",")));
@@ -156,19 +148,28 @@ public class WechatWorkJobAlarm implements JobAlarm {
     /**
      * 构建消息内容
      *
-     * @param groupName     任务组名称
      * @param info          任务信息
-     * @param alarmContent  告警内容
+     * @param jobLog  任务日志
      * @return 格式化的消息内容
      */
-    private String buildMessageContent(String groupName, XxlJobInfo info, String alarmContent) {
+    private String buildMessageContent(XxlJobInfo info, XxlJobLog jobLog) {
+        // 获取任务组信息
+        XxlJobGroup group = XxlJobAdminBootstrap.getInstance().getXxlJobGroupMapper().load(Integer.valueOf(info.getJobGroup()));
+        String groupName = group != null ? group.getTitle() : "未知任务组";
+        // 构建告警内容
+        String alarmContent = buildAlarmContent(info, jobLog);
+
+        // 构建消息内容
         StringBuilder content = new StringBuilder();
-        content.append("# 【XXL-Job 任务告警】\n");
-        content.append("> 任务组：").append(groupName).append("\n");
+        content.append("# 【分布式任务调度平台｜XXL-JOB】\n");
+        content.append("> 执行器：").append(groupName).append("\n");
         content.append("> 任务ID：").append(info.getId()).append("\n");
         content.append("> 任务描述：").append(info.getJobDesc()).append("\n");
         content.append("> 告警类型：任务执行失败\n");
-        content.append("> 告警详情：\n").append(alarmContent);
+        content.append("> 告警内容：\n")
+                .append("```")
+                .append(alarmContent)
+                .append("```");
         return content.toString();
     }
 }
