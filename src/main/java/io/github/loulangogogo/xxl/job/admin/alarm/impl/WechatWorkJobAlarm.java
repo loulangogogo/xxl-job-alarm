@@ -61,7 +61,7 @@ public class WechatWorkJobAlarm implements JobAlarm {
         // 校验配置信息
         if (wxCpProperties == null || wxCpProperties.getCorpId() == null
                 || wxCpProperties.getCorpSecret() == null || wxCpProperties.getAgentId() == null) {
-            logger.error(">>>>>>>>>>> xxl-job, 企业微信告警配置不完整，请检查 wx.cp 配置");
+            logger.error(">>>>>>>>>>> xxl-job, 企业微信告警配置不完整，请检查 wechat.work 配置");
             return false;
         }
 
