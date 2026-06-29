@@ -32,7 +32,7 @@ public class WechatWorkJobAlarm implements JobAlarm {
     private boolean enable = false;
 
     // 消息推送地址
-    private String url = "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key={}";
+    private static final String url = "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key={}";
 
     /**
      * 执行任务告警
