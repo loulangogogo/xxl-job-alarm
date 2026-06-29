@@ -22,7 +22,12 @@ import java.net.URLEncoder;
 import java.util.*;
 
 /*********************************************************
- ** 企业微信通知服务类
+ ** 钉钉群机器人Webhook告警实现
+ ** <p>
+ ** 复用任务的【告警邮箱】字段存储凭证，支持两种安全模式：
+ ** - 纯access_token：适用于IP白名单/关键词模式
+ ** - access_token&secret：适用于加签模式（推荐），自动进行HmacSHA256签名
+ ** </p>
  **
  ** @author loulan
  ** @since 17
@@ -35,25 +40,24 @@ public class DingtalkJobAlarm implements JobAlarm {
     @Value("${xxl-job.alarm.dingtalk.enable:false}")
     private boolean enable = false;
 
-    // 消息推送地址
+    /** 钉钉Webhook推送地址，{}由access_token替换 */
     private static final String url = "https://oapi.dingtalk.com/robot/send?access_token={}";
 
 
 
     /**
-     * 执行任务告警
+     * 执行钉钉Webhook告警
      * <p>
-     * 当任务执行失败或达到告警条件时触发，通过钉钉发送告警通知
-     * </p>
+     * 根据接收人凭证格式自动选择签名策略：
+     * 纯token直接发送；token&secret则先计算HmacSHA256签名再附加到URL参数。
      *
-     * @param info    任务信息，包含任务配置和告警接收人等
-     * @param jobLog  任务日志，包含任务执行结果和日志信息
-     * @return true-告警成功，false-告警失败
+     * @param info   任务信息，alarmEmail字段存储凭证列表（逗号分隔）
+     * @param jobLog 任务执行日志
+     * @return true-所有接收人发送成功，false-任一接收人发送失败
      */
     @Override
     public boolean doAlarm(XxlJobInfo info, XxlJobLog jobLog) {
 
-        // 如果没有开启钉钉通知，那么不进行通知
         if (!enable) {
             logger.warn(">>>>>>>>>>> xxl-job, 钉钉告警通知功能没有开启, JobId:{}", info != null ? info.getId() : "null");
             return true;
@@ -61,16 +65,13 @@ public class DingtalkJobAlarm implements JobAlarm {
 
         boolean alarmResult = true;
 
-        // 校验告警接收人
         if (info == null || info.getAlarmEmail() == null || info.getAlarmEmail().trim().isEmpty()) {
             logger.warn(">>>>>>>>>>> xxl-job, 任务未配置告警接收人，JobId:{}", info != null ? info.getId() : "null");
             return true;
         }
 
-        // 构建消息内容
         String content = buildMessageContent(info, jobLog);
 
-        // 发送消息给所有接收人
         Set<String> receiverSet = new HashSet<>(Arrays.asList(info.getAlarmEmail().split(",")));
 
         for (String receiver : receiverSet) {
@@ -82,23 +83,21 @@ public class DingtalkJobAlarm implements JobAlarm {
                 markdown.put("text",content);
                 body.put("markdown", markdown);
 
-                // 如果用户选择的是秘钥的方式，那么需要进行秘钥验签
+                // 根据凭证格式构建URL：纯token直接替换，token&secret需追加签名参数
                 String receiverUrl = url;
                 String[] receiverAndSecret = info.getAlarmEmail().split("&");
                 if (receiverAndSecret.length == 1) {
+                    // IP白名单/关键词模式：只需access_token
                     String accessToken = receiverAndSecret[0];
                     receiverUrl = StrTool.format(receiverUrl, accessToken);
 
                 } else if (receiverAndSecret.length == 2) {
-                    // 这个的输入是accessToken&secret
+                    // 加签模式：需拼接timestamp和HmacSHA256签名
                     receiverUrl += "&timestamp={}&sign={}";
-                    // 获取密钥
                     String secret = receiverAndSecret[1];
                     String accessToken = receiverAndSecret[0];
 
-                    // 获取时间戳
                     Long timestamp = System.currentTimeMillis();
-                    // 获取签名
                     String sign = sign(timestamp, secret);
 
                     receiverUrl = StrTool.format(receiverUrl,accessToken, timestamp, sign);
@@ -114,6 +113,7 @@ public class DingtalkJobAlarm implements JobAlarm {
             } catch (Exception e) {
                 logger.error(">>>>>>>>>>> xxl-job, 钉钉告警消息发送失败，接收人:{}, JobLogId:{}",
                         receiver, jobLog.getId(), e);
+                // 单个接收人失败不中断其他接收人，但标记整体结果为失败
                 alarmResult = false;
             }
         }
@@ -122,34 +122,33 @@ public class DingtalkJobAlarm implements JobAlarm {
     }
 
     /**
-     * 生成钉钉机器人Webhook请求的签名
+     * 生成钉钉Webhook加签签名
      * <p>
-     * 使用HmacSHA256算法对时间戳和密钥进行签名，并将结果进行Base64编码和URL编码，
-     * 用于钉钉机器人消息发送时的身份验证。
+     * 签名算法：HmacSHA256(timestamp + "\n" + secret) → Base64 → URLEncode。
+     * timestamp同时作为URL参数传递，钉钉服务端据此校验请求时效性（有效期1小时）。
      *
-     * @param timestamp 当前时间戳（毫秒级）
-     * @param secret    钉钉机器人的加签密钥
+     * @param timestamp 当前毫秒级时间戳
+     * @param secret    机器人加签密钥
      * @return URL编码后的签名字符串
-     * @exception Exception 当加密或编码过程发生异常时抛出
-     * @author :loulan
-     * */
+     * @throws Exception 当HMAC计算或编码异常时抛出
+     * @author loulan
+     */
     public static String sign(Long  timestamp,String secret) throws Exception{
-        // 拼接待签名字符串：时间戳 + 换行符 + 密钥
         String stringToSign = timestamp + "\n" + secret;
         Mac mac = Mac.getInstance("HmacSHA256");
         mac.init(new SecretKeySpec(secret.getBytes("UTF-8"), "HmacSHA256"));
         byte[] signData = mac.doFinal(stringToSign.getBytes("UTF-8"));
-        // 对签名数据进行Base64编码后再进行URL编码
+        // Base64 → URL编码，这是钉钉接口要求的签名格式
         String sign = URLEncoder.encode(new String(Base64Tool.toEncode(signData)),"UTF-8");
         return sign;
     }
 
     /**
-     * 构建告警内容
+     * 构建告警详情：JobLogId + 非成功阶段的触发/执行信息
      *
-     * @param info    任务信息
-     * @param jobLog  任务日志
-     * @return 告警内容字符串
+     * @param info   任务信息（当前未使用，保留以统一接口签名）
+     * @param jobLog 任务执行日志
+     * @return 格式化的告警详情字符串
      */
     private String buildAlarmContent(XxlJobInfo info, XxlJobLog jobLog) {
         StringBuilder alarmContent = new StringBuilder();
@@ -167,26 +166,24 @@ public class DingtalkJobAlarm implements JobAlarm {
     }
 
     /**
-     * 构建消息内容
+     * 构建钉钉Markdown告警消息体
      *
-     * @param info          任务信息
-     * @param jobLog  任务日志
-     * @return 格式化的消息内容
+     * @param info   任务信息，包含任务组ID、任务ID、任务描述等
+     * @param jobLog 任务执行日志
+     * @return 格式化的Markdown消息字符串
      */
     private String buildMessageContent(XxlJobInfo info, XxlJobLog jobLog) {
-        // 获取任务组信息
         XxlJobGroup group = XxlJobAdminBootstrap.getInstance().getXxlJobGroupMapper().load(Integer.valueOf(info.getJobGroup()));
         String groupName = group != null ? group.getTitle() : "未知任务组";
-        // 构建告警内容
         String alarmContent = buildAlarmContent(info, jobLog);
 
-        // 构建消息内容
         StringBuilder content = new StringBuilder();
         content.append("# 【分布式任务调度平台｜XXL-JOB】\n");
         content.append("- 执行器：").append(groupName).append("\n");
         content.append("- 任务ID：").append(info.getId()).append("\n");
         content.append("- 任务描述：").append(info.getJobDesc()).append("\n");
         content.append("- 告警类型：").append(I18nUtil.getString("jobconf_monitor_alarm_type")).append("\n");
+        // 告警内容使用引用格式，与列表项形成视觉区分
         content.append("- 告警内容：\n")
                 .append("> ").append(alarmContent);
         return content.toString();

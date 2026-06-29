@@ -18,7 +18,12 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 
 /*********************************************************
- ** 企业微信通知服务类
+ ** 企业微信群机器人Webhook告警实现
+ ** <p>
+ ** 复用任务的【告警邮箱】字段存储Webhook Key（逗号分隔支持多Key），
+ ** 避免修改XXL-Job数据库表结构即可扩展告警通道。
+ ** 消息采用Markdown格式，包含执行器、任务ID、描述、告警类型和详情。
+ ** </p>
  **
  ** @author loulan
  ** @since 17
@@ -31,23 +36,19 @@ public class WechatWorkJobAlarm implements JobAlarm {
     @Value("${xxl-job.alarm.wechatwork.enable:false}")
     private boolean enable = false;
 
-    // 消息推送地址
+    /** 企业微信Webhook推送地址，{}由机器人Key替换 */
     private static final String url = "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key={}";
 
     /**
-     * 执行任务告警
-     * <p>
-     * 当任务执行失败或达到告警条件时触发，通过企业微信发送告警通知
-     * </p>
+     * 执行企业微信Webhook告警
      *
-     * @param info   任务信息，包含任务配置和告警接收人等
-     * @param jobLog 任务日志，包含任务执行结果和日志信息
-     * @return true-告警成功，false-告警失败
+     * @param info   任务信息，alarmEmail字段存储Webhook Key列表（逗号分隔）
+     * @param jobLog 任务执行日志，包含触发/执行结果和日志详情
+     * @return true-所有接收人发送成功，false-任一接收人发送失败
      */
     @Override
     public boolean doAlarm(XxlJobInfo info, XxlJobLog jobLog) {
 
-        // 如果没有开启企业微信通知，那么不进行通知
         if (!enable) {
             logger.warn(">>>>>>>>>>> xxl-job, 企业微信告警通知功能没有开启, JobId:{}", info != null ? info.getId() : "null");
             return true;
@@ -55,16 +56,13 @@ public class WechatWorkJobAlarm implements JobAlarm {
 
         boolean alarmResult = true;
 
-        // 校验告警接收人
         if (info == null || info.getAlarmEmail() == null || info.getAlarmEmail().trim().isEmpty()) {
             logger.warn(">>>>>>>>>>> xxl-job, 任务未配置告警接收人，JobId:{}", info != null ? info.getId() : "null");
             return true;
         }
 
-        // 构建消息内容
         String content = buildMessageContent(info, jobLog);
 
-        // 发送消息给所有接收人
         Set<String> receiverSet = new HashSet<>(Arrays.asList(info.getAlarmEmail().split(",")));
 
         for (String receiver : receiverSet) {
@@ -80,6 +78,7 @@ public class WechatWorkJobAlarm implements JobAlarm {
             } catch (Exception e) {
                 logger.error(">>>>>>>>>>> xxl-job, 企业微信告警消息发送失败，接收人:{}, JobLogId:{}",
                         receiver, jobLog.getId(), e);
+                // 单个接收人失败不中断其他接收人，但标记整体结果为失败
                 alarmResult = false;
             }
         }
@@ -89,11 +88,11 @@ public class WechatWorkJobAlarm implements JobAlarm {
 
 
     /**
-     * 构建告警内容
+     * 构建告警详情：JobLogId + 非成功阶段的触发/执行信息
      *
-     * @param info   任务信息
-     * @param jobLog 任务日志
-     * @return 告警内容字符串
+     * @param info   任务信息（当前未使用，保留以统一接口签名）
+     * @param jobLog 任务执行日志，包含触发码、执行码等
+     * @return 格式化的告警详情字符串
      */
     private String buildAlarmContent(XxlJobInfo info, XxlJobLog jobLog) {
         StringBuilder alarmContent = new StringBuilder();
@@ -111,26 +110,24 @@ public class WechatWorkJobAlarm implements JobAlarm {
     }
 
     /**
-     * 构建消息内容
+     * 构建企业微信Markdown告警消息体
      *
-     * @param info   任务信息
-     * @param jobLog 任务日志
-     * @return 格式化的消息内容
+     * @param info   任务信息，包含任务组ID、任务ID、任务描述等
+     * @param jobLog 任务执行日志
+     * @return 格式化的Markdown消息字符串
      */
     private String buildMessageContent(XxlJobInfo info, XxlJobLog jobLog) {
-        // 获取任务组信息
         XxlJobGroup group = XxlJobAdminBootstrap.getInstance().getXxlJobGroupMapper().load(Integer.valueOf(info.getJobGroup()));
         String groupName = group != null ? group.getTitle() : "未知任务组";
-        // 构建告警内容
         String alarmContent = buildAlarmContent(info, jobLog);
 
-        // 构建消息内容
         StringBuilder content = new StringBuilder();
         content.append("# 【分布式任务调度平台｜XXL-JOB】\n");
         content.append("> 执行器：").append(groupName).append("\n");
         content.append("> 任务ID：").append(info.getId()).append("\n");
         content.append("> 任务描述：").append(info.getJobDesc()).append("\n");
         content.append("> 告警类型：").append(I18nUtil.getString("jobconf_monitor_alarm_type")).append("\n");
+        // 告警内容使用分隔线+引用格式，与头部信息形成视觉层次
         content.append("> 告警内容：\n")
                 .append("> ------------------\n")
                 .append("> ").append(alarmContent);
