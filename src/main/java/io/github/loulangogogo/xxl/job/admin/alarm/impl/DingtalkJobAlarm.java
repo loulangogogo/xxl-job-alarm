@@ -183,13 +183,13 @@ public class DingtalkJobAlarm implements JobAlarm {
         // 构建消息内容
         StringBuilder content = new StringBuilder();
         content.append("# 【分布式任务调度平台｜XXL-JOB】\n");
-        content.append("> 执行器：").append(groupName).append("\n");
-        content.append("> 任务ID：").append(info.getId()).append("\n");
-        content.append("> 任务描述：").append(info.getJobDesc()).append("\n");
-        content.append("> 告警类型：").append(I18nUtil.getString("jobconf_monitor_alarm_type")).append("\n");
-        content.append("> 告警内容：\n")
+        content.append("- 执行器：").append(groupName).append("\n");
+        content.append("- 任务ID：").append(info.getId()).append("\n");
+        content.append("- 任务描述：").append(info.getJobDesc()).append("\n");
+        content.append("- 告警类型：").append(I18nUtil.getString("jobconf_monitor_alarm_type")).append("\n");
+        content.append("- 告警内容：\n")
                 .append("> ------------------")
-                .append("> > ").append(alarmContent);
+                .append("> ").append(alarmContent);
         return content.toString();
     }
 }

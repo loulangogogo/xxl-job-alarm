@@ -133,7 +133,7 @@ public class WechatWorkJobAlarm implements JobAlarm {
         content.append("> 告警类型：").append(I18nUtil.getString("jobconf_monitor_alarm_type")).append("\n");
         content.append("> 告警内容：\n")
                 .append("> ------------------")
-                .append("> > ").append(alarmContent);
+                .append("> ").append(alarmContent);
         return content.toString();
     }
 }
