@@ -75,7 +75,8 @@ public class WechatWorkJobAlarm implements JobAlarm {
                 markdown.put("content", content);
                 body.put("markdown", markdown);
 
-                HttpTool.POST.toStr(StrTool.format(url, receiver), JsonTool.toJson(body));
+                String res = HttpTool.POST.toStr(StrTool.format(url, receiver), JsonTool.toJson(body));
+                logger.info(">>>>>>>>>>> xxl-job, 企业微信告警消息发送完成，返回结果:{}",res);
             } catch (Exception e) {
                 logger.error(">>>>>>>>>>> xxl-job, 企业微信告警消息发送失败，接收人:{}, JobLogId:{}",
                         receiver, jobLog.getId(), e);

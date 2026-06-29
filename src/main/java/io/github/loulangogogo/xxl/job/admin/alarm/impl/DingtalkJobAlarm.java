@@ -109,7 +109,8 @@ public class DingtalkJobAlarm implements JobAlarm {
                     continue;
                 }
 
-                HttpTool.POST.toStr(receiverUrl, JsonTool.toJson(body));
+                String res = HttpTool.POST.toStr(receiverUrl, JsonTool.toJson(body));
+                logger.info(">>>>>>>>>>> xxl-job, 钉钉告警消息发送完成，返回结果:{}",res);
             } catch (Exception e) {
                 logger.error(">>>>>>>>>>> xxl-job, 钉钉告警消息发送失败，接收人:{}, JobLogId:{}",
                         receiver, jobLog.getId(), e);
