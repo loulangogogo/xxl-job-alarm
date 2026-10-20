@@ -121,6 +121,14 @@
         </license>
     </licenses>
 
+    <developers>
+        <developer>
+            <id>loulangogogo</id>
+            <name>loulan</name>
+            <url>https://github.com/loulangogogo</url>
+        </developer>
+    </developers>
+
     <scm>
         <connection>scm:git@github.com:loulangogogo/xxl-job-alarm.git</connection>
         <developerConnection>scm:git@github.com:loulangogogo/xxl-job-alarm.git</developerConnection>
