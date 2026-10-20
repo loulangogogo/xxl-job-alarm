@@ -118,14 +118,14 @@ public class WechatWorkJobAlarm implements JobAlarm {
      */
     private String buildMessageContent(XxlJobInfo info, XxlJobLog jobLog) {
         XxlJobGroup group = XxlJobAdminBootstrap.getInstance().getXxlJobGroupMapper().load(Integer.valueOf(info.getJobGroup()));
-        String groupName = group != null ? group.getTitle() : "未知任务组";
+        String groupName = group != null ? group.getName() : "未知任务组";
         String alarmContent = buildAlarmContent(info, jobLog);
 
         StringBuilder content = new StringBuilder();
         content.append("# 【分布式任务调度平台｜XXL-JOB】\n");
         content.append("> 执行器：").append(groupName).append("\n");
         content.append("> 任务ID：").append(info.getId()).append("\n");
-        content.append("> 任务描述：").append(info.getJobDesc()).append("\n");
+        content.append("> 任务描述：").append(info.getName()).append("\n");
         content.append("> 告警类型：").append(I18nUtil.getString("jobconf_monitor_alarm_type")).append("\n");
         // 告警内容使用分隔线+引用格式，与头部信息形成视觉层次
         content.append("> 告警内容：\n")
