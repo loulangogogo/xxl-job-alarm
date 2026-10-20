@@ -38,9 +38,10 @@ xxl-job-alarm/
 
 本模块版本号与所适配的 XXL-Job 版本保持对应关系，当前适配 **XXL-Job 3.4.2**。
 
-| 模块版本 | XXL-Job 版本 |
-|----------|-------------|
-| 3.4.2.x  | 3.4.2       |
+| 模块版本    | XXL-Job 版本 |
+|---------|------------|
+| 3.4.2.x | 3.4.2      |
+| 3.5.0.x | 3.5.0      |
 
 ## 快速开始
 
@@ -52,7 +53,7 @@ xxl-job-alarm/
 <dependency>
     <groupId>io.github.loulangogogo</groupId>
     <artifactId>xxl-job-alarm</artifactId>
-    <version>3.4.2.1</version>
+    <version>3.5.0</version>
 </dependency>
 ```
 
