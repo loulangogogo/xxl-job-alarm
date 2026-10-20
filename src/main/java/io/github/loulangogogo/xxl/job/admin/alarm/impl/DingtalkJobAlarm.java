@@ -26,7 +26,7 @@ import java.util.*;
  ** <p>
  ** 复用任务的【告警邮箱】字段存储凭证，支持两种安全模式：
  ** - 纯access_token：适用于IP白名单/关键词模式
- ** - access_token&secret：适用于加签模式（推荐），自动进行HmacSHA256签名
+ ** - {@code access_token&secret}：适用于加签模式（推荐），自动进行HmacSHA256签名
  ** </p>
  **
  ** @author loulan
@@ -49,7 +49,7 @@ public class DingtalkJobAlarm implements JobAlarm {
      * 执行钉钉Webhook告警
      * <p>
      * 根据接收人凭证格式自动选择签名策略：
-     * 纯token直接发送；token&secret则先计算HmacSHA256签名再附加到URL参数。
+     * 纯token直接发送；{@code token&secret}则先计算HmacSHA256签名再附加到URL参数。
      *
      * @param info   任务信息，alarmEmail字段存储凭证列表（逗号分隔）
      * @param jobLog 任务执行日志
